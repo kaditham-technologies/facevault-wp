@@ -15,8 +15,8 @@ rigour to keep it stable and safe.
   - `blocks/verify-button/` — Gutenberg block. Plain `wp.blocks` JavaScript,
     **no JSX, no build step**.
   - `assets/` — front-end and admin JS/CSS. Vanilla, no build step.
-- `tests/unit/` — PHPUnit + Brain\Monkey unit tests (no WordPress install
-  needed).
+- `tests/unit/` — PHPUnit unit tests against the in-memory WordPress shims in
+  `tests/bootstrap.php` (no WordPress install, no mocking framework).
 - `composer.json` — **dev tooling only**. The shipped plugin has zero runtime
   Composer dependencies, and that is intentional.
 
