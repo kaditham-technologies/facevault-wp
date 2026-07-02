@@ -44,6 +44,15 @@ class Webhook_Controller {
 	private $user_status;
 
 	/**
+	 * Whether this request already logged a verification failure. WP REST
+	 * re-runs permission callbacks after dispatch to build the Allow
+	 * response header, so side effects here must be once-per-request.
+	 *
+	 * @var bool
+	 */
+	private $failure_logged = false;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param User_Status $user_status Status writer.
@@ -87,7 +96,10 @@ class Webhook_Controller {
 	public function verify_signature( $request ) {
 		$secret = (string) Settings::get( 'webhook_secret' );
 		if ( '' === $secret ) {
-			$this->log( '', 'not_configured', 401 );
+			if ( ! $this->failure_logged ) {
+				$this->failure_logged = true;
+				$this->log( '', 'not_configured', 401 );
+			}
 			return new WP_Error(
 				'facevault_not_configured',
 				__( 'Webhook secret is not configured.', 'facevault-identity-verification' ),
@@ -99,7 +111,10 @@ class Webhook_Controller {
 		$expected  = hash_hmac( 'sha256', (string) $request->get_body(), $secret );
 
 		if ( '' === $signature || ! hash_equals( $expected, $signature ) ) {
-			$this->log_bad_signature();
+			if ( ! $this->failure_logged ) {
+				$this->failure_logged = true;
+				$this->log_bad_signature();
+			}
 			return new WP_Error(
 				'facevault_bad_signature',
 				__( 'Invalid webhook signature.', 'facevault-identity-verification' ),
