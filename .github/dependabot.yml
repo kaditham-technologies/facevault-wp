@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Keep the SHA-pinned GitHub Actions in CI / release workflows current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Dev tooling only — the shipped plugin has zero runtime Composer deps.
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
