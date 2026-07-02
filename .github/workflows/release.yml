@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      # All third-party actions are SHA-pinned per supply-chain best practice;
+      # the comment records the human-readable version next to each SHA.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      # A WordPress plugin must ship its real version in three places that
+      # cannot be injected at runtime. Fail loudly if the tag disagrees with
+      # any of them instead of publishing a mismatched zip.
+      - name: Verify version consistency
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          HEADER=$(grep -oP '^ \* Version:\s*\K[0-9a-zA-Z.\-]+' facevault-identity-verification/facevault-identity-verification.php)
+          CONSTANT=$(grep -oP "define\( 'FACEVAULT_VERSION', '\K[0-9a-zA-Z.\-]+" facevault-identity-verification/facevault-identity-verification.php)
+          STABLE=$(grep -oP '^Stable tag:\s*\K[0-9a-zA-Z.\-]+' facevault-identity-verification/readme.txt)
+          echo "tag=$VERSION header=$HEADER constant=$CONSTANT stable=$STABLE"
+          [ "$VERSION" = "$HEADER" ] && [ "$VERSION" = "$CONSTANT" ] && [ "$VERSION" = "$STABLE" ] \
+            || { echo "Version mismatch between tag, plugin header, constant, and readme.txt" >&2; exit 1; }
+
+      - name: Syntax sweep before release
+        run: |
+          find facevault-identity-verification -name '*.php' -print0 \
+            | xargs -0 -n1 php -l
+
+      # The folder sits at the zip root so the artifact installs directly via
+      # Plugins → Add New → Upload Plugin.
+      - name: Build plugin zip + SHA256 checksums
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          zip -r "facevault-identity-verification-${VERSION}.zip" facevault-identity-verification/
+          sha256sum "facevault-identity-verification-${VERSION}.zip" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # Publish the [X.Y.Z] CHANGELOG section as the release body so the
+      # public release page mirrors the in-repo changelog. Strip the `v`
+      # prefix to match Keep a Changelog convention (## [1.0.0], not [v1.0.0]).
+      - name: Extract changelog for this tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          awk -v tag="$VERSION" '
+            $0 ~ "^## \\[" tag "\\]" { capture=1; next }
+            capture && /^## \[/ { exit }
+            capture { print }
+          ' CHANGELOG.md > release-body.md
+          echo "Body length: $(wc -c < release-body.md)"
+          if [ ! -s release-body.md ]; then
+            echo "WARNING: no CHANGELOG section found for $VERSION" >&2
+          fi
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2.6.2
+        with:
+          files: |
+            facevault-identity-verification-*.zip
+            SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          body_path: release-body.md

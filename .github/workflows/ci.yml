@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Single job named `test` — the branch ruleset requires a status check with
+  # exactly this name; a PHP matrix would rename it to `test (7.4)` etc.
+  # Instead we cover both ends of the supported PHP range sequentially.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Third-party actions are SHA-pinned (tags can be repointed, SHAs can't);
+      # the comment records the human-readable version for reviewable bumps.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Install dev dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: PHPCS (WordPress-Extra)
+        run: composer lint
+
+      - name: PHPUnit (PHP 8.3)
+        run: composer test
+
+      # Re-run tests + a syntax sweep on the minimum supported PHP to catch
+      # accidental use of PHP 8-only syntax (the plugin declares 7.4+).
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2
+        with:
+          php-version: '7.4'
+          coverage: none
+
+      - name: Reinstall dev dependencies for PHP 7.4
+        run: |
+          rm -rf vendor composer.lock
+          composer install --no-interaction --no-progress
+
+      - name: PHPUnit (PHP 7.4)
+        run: composer test
+
+      - name: Syntax sweep (PHP 7.4)
+        run: |
+          find facevault-identity-verification -name '*.php' -print0 \
+            | xargs -0 -n1 php -l

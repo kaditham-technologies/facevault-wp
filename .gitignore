@@ -1,0 +1,15 @@
+# Composer dev tooling
+vendor/
+
+# Local wp-env overrides (may contain credentials)
+.wp-env.override.json
+
+# Build artifacts
+*.zip
+SHA256SUMS.txt
+release-body.md
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

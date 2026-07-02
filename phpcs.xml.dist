@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<ruleset name="FaceVault Identity Verification">
+    <description>WordPress coding standards for the shipped plugin directory.</description>
+
+    <file>facevault-identity-verification</file>
+    <exclude-pattern>*/assets/*</exclude-pattern>
+    <exclude-pattern>*/blocks/*/index.js</exclude-pattern>
+
+    <arg name="extensions" value="php"/>
+    <arg name="basepath" value="."/>
+    <arg value="ps"/>
+
+    <config name="minimum_wp_version" value="6.3"/>
+
+    <rule ref="WordPress-Extra"/>
+
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="facevault-identity-verification"/>
+            </property>
+        </properties>
+    </rule>
+
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="facevault"/>
+                <element value="FaceVault"/>
+                <element value="FACEVAULT"/>
+            </property>
+        </properties>
+    </rule>
+</ruleset>
