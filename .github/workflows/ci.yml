@@ -40,9 +40,11 @@ jobs:
           php-version: '7.4'
           coverage: none
 
+      # The lock is resolved against platform php 7.4.33 (composer.json
+      # config), so the same lock installs cleanly on every supported PHP.
       - name: Reinstall dev dependencies for PHP 7.4
         run: |
-          rm -rf vendor composer.lock
+          rm -rf vendor
           composer install --no-interaction --no-progress
 
       - name: PHPUnit (PHP 7.4)
