@@ -81,11 +81,26 @@ final class WebhookSignatureTest extends TestCase {
 		$this->assertSame( 'facevault_not_configured', $result->get_error_code() );
 	}
 
+	public function test_permission_callback_rerun_logs_once_per_request(): void {
+		// WP REST re-runs permission callbacks post-dispatch to build the
+		// Allow header; a single request (= single controller instance)
+		// must log its failure only once.
+		$request = new FV_Test_Request( '{}', array( 'X-FaceVault-Signature' => 'deadbeef' ) );
+
+		$this->controller->verify_signature( $request );
+		$this->controller->verify_signature( $request );
+
+		$this->assertCount( 1, $this->log_entries() );
+		$this->assertSame( 1, (int) get_transient( 'facevault_badsig_count' ) );
+	}
+
 	public function test_bad_signature_logging_is_rate_limited(): void {
 		$request = new FV_Test_Request( '{}', array( 'X-FaceVault-Signature' => 'deadbeef' ) );
 
 		for ( $i = 0; $i < 12; $i++ ) {
-			$this->controller->verify_signature( $request );
+			// Fresh instance per iteration: each real request gets its own.
+			$controller = new Webhook_Controller( new User_Status( new Api_Client() ) );
+			$controller->verify_signature( $request );
 		}
 
 		$bad = array_filter(

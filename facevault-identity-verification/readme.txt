@@ -2,7 +2,7 @@
 Contributors: facevault
 Tags: identity verification, kyc, age verification, woocommerce, biometrics
 Requires at least: 6.3
-Tested up to: 6.6
+Tested up to: 7.0
 Requires PHP: 7.4
 Stable tag: 0.1.0
 License: GPLv2 or later
