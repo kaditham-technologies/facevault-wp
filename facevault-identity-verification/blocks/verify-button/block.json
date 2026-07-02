@@ -1,0 +1,26 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "facevault/verify-button",
+    "title": "FaceVault Verify Button",
+    "category": "widgets",
+    "icon": "id-alt",
+    "description": "Identity verification button. Logged-in visitors verify with FaceVault; verified visitors see their status badge.",
+    "keywords": [ "identity", "verification", "kyc", "facevault" ],
+    "textdomain": "facevault-identity-verification",
+    "attributes": {
+        "label": {
+            "type": "string",
+            "default": ""
+        },
+        "redirect": {
+            "type": "string",
+            "default": ""
+        }
+    },
+    "supports": {
+        "html": false,
+        "multiple": false
+    },
+    "editorScript": "file:./index.js"
+}
