@@ -138,6 +138,11 @@ class Webhook_Controller {
 	public function handle( $request ) {
 		$payload = json_decode( (string) $request->get_body(), true );
 		if ( ! is_array( $payload ) ) {
+			// Real FaceVault deliveries never hit this branch: with
+			// Content-Type: application/json, WP's REST layer rejects
+			// malformed bodies (400 rest_invalid_json) before dispatch.
+			// Kept deliberately as a guard for signed requests carrying
+			// other content types or direct handler invocation.
 			$this->log( '', 'malformed', 400 );
 			return new WP_REST_Response(
 				array(

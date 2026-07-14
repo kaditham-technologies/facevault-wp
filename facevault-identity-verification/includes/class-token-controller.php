@@ -155,7 +155,9 @@ class Token_Controller {
 		$page       = is_array( $params ) && isset( $params['page'] ) ? (string) $params['page'] : '';
 		$return_url = '' === $page ? null : wp_validate_redirect( $page, home_url( '/' ) );
 
-		$external_user_id = apply_filters( 'facevault_external_user_id', (string) $user_id, $user_id );
+		// Opaque per-user ref (never the raw WP user id — enumerable); the
+		// facevault_external_user_id filter is applied inside external_ref().
+		$external_user_id = $this->user_status->external_ref( $user_id );
 
 		$result = $this->api_client->create_widget_session( $external_user_id, $return_url );
 

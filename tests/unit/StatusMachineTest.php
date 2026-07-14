@@ -117,6 +117,57 @@ final class StatusMachineTest extends TestCase {
 		$this->assertSame( 'none', $this->status->get_status( 1 ) );
 	}
 
+	public function test_default_external_ref_is_opaque_and_stable(): void {
+		$ref = $this->status->external_ref( 1 );
+
+		// Never the enumerable raw user id; unguessable; stable per user.
+		$this->assertNotSame( '1', $ref );
+		$this->assertMatchesRegularExpression( '/^wp_[0-9a-f]{32}$/', $ref );
+		$this->assertSame( $ref, $this->status->external_ref( 1 ) );
+		$this->assertNotSame( $ref, $this->status->external_ref( 2 ) );
+	}
+
+	public function test_external_ref_filter_overrides_default(): void {
+		FV_Test_State::$filters['facevault_external_user_id'] = function ( $default_ref, $user_id ) {
+			return 'crm-' . $user_id;
+		};
+
+		$this->assertSame( 'crm-1', $this->status->external_ref( 1 ) );
+	}
+
+	public function test_webhook_echo_of_opaque_ref_applies(): void {
+		$ref = $this->status->external_ref( 1 );
+		$this->status->record_mint( 1, 's1' );
+
+		$outcome = $this->status->apply_webhook( 's1', $ref, 'accept', 'passed' );
+
+		$this->assertSame( 'applied', $outcome );
+		$this->assertSame( 'verified', $this->status->get_status( 1 ) );
+	}
+
+	public function test_webhook_wrong_opaque_ref_is_mismatched(): void {
+		$this->status->external_ref( 1 );
+		$this->status->record_mint( 1, 's1' );
+
+		$outcome = $this->status->apply_webhook( 's1', 'wp_' . str_repeat( '0', 32 ), 'accept', 'passed' );
+
+		$this->assertSame( 'mismatched_user', $outcome );
+		$this->assertSame( 'none', $this->status->get_status( 1 ) );
+	}
+
+	public function test_legacy_raw_user_id_echo_still_applies_after_ref_exists(): void {
+		// A session minted by 0.1.0 echoed the raw user id; its late veto
+		// must still apply after the upgrade generated an opaque ref.
+		$this->status->record_mint( 1, 's1' );
+		$this->status->apply_webhook( 's1', '1', 'accept', 'passed' );
+		$this->status->external_ref( 1 );
+
+		$outcome = $this->status->apply_webhook( 's1', '1', 'reject', 'failed' );
+
+		$this->assertSame( 'applied', $outcome );
+		$this->assertSame( 'rejected', $this->status->get_status( 1 ) );
+	}
+
 	public function test_superseded_session_cannot_affect_state(): void {
 		$this->status->record_mint( 1, 's1' );
 		$this->status->record_mint( 1, 's2' );

@@ -22,6 +22,7 @@ if ( ! empty( $facevault_settings['delete_data_on_uninstall'] ) ) {
 		'_facevault_verified_at',
 		'_facevault_updated_at',
 		'_facevault_history',
+		'_facevault_external_ref',
 	);
 	foreach ( $facevault_meta_keys as $facevault_meta_key ) {
 		delete_metadata( 'user', 0, $facevault_meta_key, '', true );

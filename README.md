@@ -74,8 +74,10 @@ Verification** tab showing their status.
 
 - `facevault_status_changed( $user_id, $new_status, $old_status, $source )` —
   fires on every applied status change (`verified`, `review`, `rejected`, …).
-- `facevault_external_user_id` — filter the ID sent to FaceVault (defaults to
-  the WP user ID).
+- `facevault_external_user_id` — filter the ID sent to FaceVault. Defaults to
+  an opaque per-user random reference stored in user meta — never the raw WP
+  user id, whose sequential values would make verification status enumerable
+  through FaceVault's public status poll.
 
 ## External service disclosure
 

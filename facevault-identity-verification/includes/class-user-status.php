@@ -38,6 +38,7 @@ class User_Status {
 	const META_VERIFIED_AT      = '_facevault_verified_at';
 	const META_UPDATED_AT       = '_facevault_updated_at';
 	const META_HISTORY          = '_facevault_history';
+	const META_EXTERNAL_REF     = '_facevault_external_ref';
 
 	const HISTORY_CAP = 10;
 
@@ -80,6 +81,28 @@ class User_Status {
 	}
 
 	/**
+	 * Opaque per-user reference sent to FaceVault as external_user_id.
+	 *
+	 * Generated once on first use and stored in user meta. The raw WP user
+	 * id is deliberately not the default: FaceVault's public status poll is
+	 * scoped by (site slug, external_user_id), so sequential integer ids
+	 * would let anyone enumerate users' verification statuses. Overridable
+	 * via the facevault_external_user_id filter, which receives this ref as
+	 * the default.
+	 *
+	 * @param int $user_id User id.
+	 * @return string
+	 */
+	public function external_ref( $user_id ) {
+		$ref = (string) get_user_meta( $user_id, self::META_EXTERNAL_REF, true );
+		if ( '' === $ref ) {
+			$ref = 'wp_' . bin2hex( random_bytes( 16 ) );
+			update_user_meta( $user_id, self::META_EXTERNAL_REF, $ref );
+		}
+		return (string) apply_filters( 'facevault_external_user_id', $ref, $user_id );
+	}
+
+	/**
 	 * Record a freshly minted widget session. Deliberately does not change
 	 * the status — an unopened widget is not a verification attempt.
 	 *
@@ -116,8 +139,15 @@ class User_Status {
 			return 'unknown_session';
 		}
 
-		$expected = apply_filters( 'facevault_external_user_id', (string) $user_id, $user_id );
-		if ( '' !== (string) $external_user_id && (string) $external_user_id !== (string) $expected ) {
+		$stored   = (string) get_user_meta( $user_id, self::META_EXTERNAL_REF, true );
+		$expected = apply_filters( 'facevault_external_user_id', '' !== $stored ? $stored : (string) $user_id, $user_id );
+		$echo     = (string) $external_user_id;
+		// The raw user id stays accepted alongside the opaque ref: sessions
+		// minted before the ref existed (pre-0.1.1) echo it, and their
+		// deliveries — late vetoes included — must keep applying. The user
+		// mapping is via session_id either way; this check is consistency
+		// only.
+		if ( '' !== $echo && $echo !== (string) $expected && $echo !== (string) $user_id ) {
 			return 'mismatched_user';
 		}
 
