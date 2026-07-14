@@ -41,6 +41,8 @@ class Settings {
 			'poll_fallback'            => true,
 			'attribution'              => true,
 			'delete_data_on_uninstall' => false,
+			'gate_all_purchases'       => false,
+			'review_policy'            => 'hold',
 		);
 	}
 
@@ -154,6 +156,17 @@ class Settings {
 		);
 		$this->add_field( 'attribution', __( '“Powered by FaceVault” link', 'facevault-identity-verification' ), 'facevault_display' );
 
+		if ( class_exists( 'WooCommerce' ) ) {
+			add_settings_section(
+				'facevault_gating',
+				__( 'WooCommerce checkout gating', 'facevault-identity-verification' ),
+				array( $this, 'render_gating_intro' ),
+				'facevault'
+			);
+			$this->add_field( 'gate_all_purchases', __( 'Gate all purchases', 'facevault-identity-verification' ), 'facevault_gating' );
+			$this->add_field( 'review_policy', __( 'When verification is pending review', 'facevault-identity-verification' ), 'facevault_gating' );
+		}
+
 		add_settings_section(
 			'facevault_advanced',
 			__( 'Advanced — environment / self-hosted', 'facevault-identity-verification' ),
@@ -192,6 +205,13 @@ class Settings {
 	 */
 	public function render_connection_intro() {
 		echo '<p>' . esc_html__( 'Credentials are stored in the WordPress options table, readable by site administrators — the same model used by payment plugins. Scope your FaceVault API key to session creation only.', 'facevault-identity-verification' ) . '</p>';
+	}
+
+	/**
+	 * Gating section intro.
+	 */
+	public function render_gating_intro() {
+		echo '<p>' . esc_html__( 'Individual products and product categories can also be gated from their own edit screens (“Requires identity verification”).', 'facevault-identity-verification' ) . '</p>';
 	}
 
 	/**
@@ -278,6 +298,31 @@ class Settings {
 					esc_html__( 'Also delete per-user verification statuses when the plugin is uninstalled. Leave off if you need the records for compliance.', 'facevault-identity-verification' )
 				);
 				break;
+
+			case 'gate_all_purchases':
+				printf(
+					'<label><input type="checkbox" id="%1$s" name="%2$s" value="1" %3$s /> %4$s</label>',
+					esc_attr( $id ),
+					esc_attr( $name ),
+					checked( (bool) $value, true, false ),
+					esc_html__( 'Require identity verification for every checkout, regardless of product flags.', 'facevault-identity-verification' )
+				);
+				break;
+
+			case 'review_policy':
+				printf(
+					'<select id="%1$s" name="%2$s">
+						<option value="hold" %3$s>%4$s</option>
+						<option value="block" %5$s>%6$s</option>
+					</select>',
+					esc_attr( $id ),
+					esc_attr( $name ),
+					selected( $value, 'hold', false ),
+					esc_html__( 'Allow the order, but place it on hold until approved (recommended)', 'facevault-identity-verification' ),
+					selected( $value, 'block', false ),
+					esc_html__( 'Block checkout until approved', 'facevault-identity-verification' )
+				);
+				break;
 		}
 	}
 
@@ -342,6 +387,16 @@ class Settings {
 		$clean['poll_fallback']            = ! empty( $input['poll_fallback'] );
 		$clean['attribution']              = ! empty( $input['attribution'] );
 		$clean['delete_data_on_uninstall'] = ! empty( $input['delete_data_on_uninstall'] );
+		if ( class_exists( 'WooCommerce' ) ) {
+			$clean['gate_all_purchases'] = ! empty( $input['gate_all_purchases'] );
+			$review_policy               = isset( $input['review_policy'] ) ? (string) $input['review_policy'] : 'hold';
+			$clean['review_policy']      = in_array( $review_policy, array( 'hold', 'block' ), true ) ? $review_policy : 'hold';
+		} else {
+			// The gating fields are not on the form without WooCommerce —
+			// keep the stored values instead of silently resetting them.
+			$clean['gate_all_purchases'] = ! empty( $stored['gate_all_purchases'] );
+			$clean['review_policy']      = isset( $stored['review_policy'] ) ? $stored['review_policy'] : 'hold';
+		}
 
 		return $clean;
 	}

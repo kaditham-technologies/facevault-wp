@@ -209,6 +209,53 @@ class User_Status {
 	}
 
 	/**
+	 * Admin fiat: manually mark a user verified or not verified. Deliberately
+	 * bypasses the session-bound transition rules (including per-session
+	 * reject stickiness) — that is the point of an override — and records
+	 * the acting admin in the history entry as the audit trail.
+	 *
+	 * @param int    $user_id    User to override.
+	 * @param string $new_status STATUS_VERIFIED or STATUS_NONE.
+	 * @param int    $actor_id   Admin performing the override.
+	 * @return string Outcome: applied|duplicate.
+	 */
+	public function set_manual( $user_id, $new_status, $actor_id ) {
+		$new_status = self::STATUS_VERIFIED === $new_status ? self::STATUS_VERIFIED : self::STATUS_NONE;
+		$old        = $this->get_status( $user_id );
+		if ( $old === $new_status ) {
+			return 'duplicate';
+		}
+
+		update_user_meta( $user_id, self::META_UPDATED_AT, time() );
+		if ( self::STATUS_VERIFIED === $new_status ) {
+			update_user_meta( $user_id, self::META_STATUS, self::STATUS_VERIFIED );
+			update_user_meta( $user_id, self::META_VERIFIED_AT, time() );
+			// No verified-session anchor: this verification has no session.
+		} else {
+			delete_user_meta( $user_id, self::META_STATUS );
+			delete_user_meta( $user_id, self::META_VERIFIED_AT );
+			delete_user_meta( $user_id, self::META_VERIFIED_SESSION );
+		}
+
+		$history = $this->get_history( $user_id );
+		array_unshift(
+			$history,
+			array(
+				'session_id' => '',
+				'source'     => 'manual',
+				'status'     => $new_status,
+				'time'       => time(),
+				'actor'      => (int) $actor_id,
+			)
+		);
+		update_user_meta( $user_id, self::META_HISTORY, array_slice( $history, 0, self::HISTORY_CAP ) );
+
+		do_action( 'facevault_status_changed', $user_id, $new_status, $old, 'manual' );
+
+		return 'applied';
+	}
+
+	/**
 	 * Resolve a session id to a user, via the latest-session and
 	 * verified-anchor meta keys only.
 	 *

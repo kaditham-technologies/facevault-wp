@@ -70,6 +70,40 @@ shortcode attributes: `label="Verify my age"` and `redirect="/thanks/"`
 With WooCommerce active, customers also get a **My Account → Identity
 Verification** tab showing their status.
 
+### WooCommerce checkout gating
+
+Mark what needs a verified customer:
+
+- **Per product** — "Requires identity verification" checkbox in the
+  product's General panel.
+- **Per category** — the same flag on a product category (child categories
+  inherit it).
+- **Everything** — "Gate all purchases" in Settings → FaceVault.
+
+Unverified customers can't place a gated order: the classic checkout shows a
+notice with the verify button and rejects submission server-side; the
+Checkout Block (and any headless Store API client) gets a hard block at the
+Store API, with shoppers routed to the My Account verification tab. Guests
+are asked to log in or create an account first — verification always binds
+to a WordPress account.
+
+Every gated order records the customer's verification status, session
+reference, and verification date as order meta (HPOS-compatible), shown in
+an **Identity verification** panel on the admin order screen. Customers whose
+verification is pending human review can either be blocked, or allowed
+through with the order held automatically until the approval webhook arrives
+(default; see Settings → FaceVault).
+
+Admins get an **Identity** column on the Users list and a manual
+verify/unverify override on each user's profile screen; overrides are
+recorded in the user's verification history with the acting admin's ID.
+
+Boundaries worth knowing: verification binds identity to the WP account, not
+to the person clicking "place order"; the order-pay page for pre-created
+orders and admin-created orders bypass checkout and are not gated; the gate
+itself never calls the FaceVault API during order placement, so an API
+outage can never block a verified customer.
+
 ### Hooks for developers
 
 - `facevault_status_changed( $user_id, $new_status, $old_status, $source )` —

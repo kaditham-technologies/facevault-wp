@@ -79,6 +79,7 @@ final class Plugin {
 			new Token_Controller( $this->api_client, $this->user_status ),
 			new Webhook_Controller( $this->user_status ),
 			new Admin_Notices(),
+			new Admin_Users( $this->user_status ),
 		);
 
 		foreach ( $components as $component ) {
@@ -89,7 +90,15 @@ final class Plugin {
 
 		if ( class_exists( 'WooCommerce' ) ) {
 			require FACEVAULT_PLUGIN_DIR . 'woocommerce/class-account-tab.php';
+			require FACEVAULT_PLUGIN_DIR . 'woocommerce/class-gating-rules.php';
+			require FACEVAULT_PLUGIN_DIR . 'woocommerce/class-checkout-gate.php';
+			require FACEVAULT_PLUGIN_DIR . 'woocommerce/class-order-meta.php';
+
+			$rules = new Gating_Rules( $this->user_status );
 			( new Account_Tab( $this->render ) )->register();
+			$rules->register();
+			( new Checkout_Gate( $rules, $this->user_status, $this->render ) )->register();
+			( new Order_Meta( $rules, $this->user_status ) )->register();
 		}
 	}
 

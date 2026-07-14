@@ -17,6 +17,13 @@ hosted widget; the signed webhook flips their verification status on your
 site. Add the verify button with the `[facevault_verify]` shortcode, the
 FaceVault Verify Button block, or the WooCommerce My Account tab.
 
+With WooCommerce, gate checkout behind verification: flag single products,
+whole product categories, or every purchase. Unverified customers are
+blocked on the classic checkout, the Checkout Block, and the Store API;
+orders pending review are held automatically and released on approval. Each
+order records the customer's verification status, and admins get a Users
+list status column with a manual override.
+
 This plugin connects to the FaceVault service (facevault.id): the widget is
 loaded from app.facevault.id and your server calls api.facevault.id to create
 verification sessions and check status. Identity documents and selfies are

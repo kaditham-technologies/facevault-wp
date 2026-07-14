@@ -22,6 +22,15 @@
         </properties>
     </rule>
 
+    <rule ref="WordPress.WP.Capabilities">
+        <properties>
+            <!-- WooCommerce capability, unknown to the WP-core-only sniff. -->
+            <property name="custom_capabilities" type="array">
+                <element value="manage_product_terms"/>
+            </property>
+        </properties>
+    </rule>
+
     <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
         <properties>
             <property name="prefixes" type="array">

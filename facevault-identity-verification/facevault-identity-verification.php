@@ -32,6 +32,7 @@ require FACEVAULT_PLUGIN_DIR . 'includes/class-token-controller.php';
 require FACEVAULT_PLUGIN_DIR . 'includes/class-webhook-controller.php';
 require FACEVAULT_PLUGIN_DIR . 'includes/class-render.php';
 require FACEVAULT_PLUGIN_DIR . 'includes/class-admin-notices.php';
+require FACEVAULT_PLUGIN_DIR . 'includes/class-admin-users.php';
 
 register_activation_hook( __FILE__, array( 'FaceVault\\WP\\Plugin', 'activate' ) );
 register_deactivation_hook( __FILE__, 'flush_rewrite_rules' );

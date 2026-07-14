@@ -17,22 +17,40 @@ define( 'HOUR_IN_SECONDS', 3600 );
  * Shared mutable test state, reset per test.
  */
 final class FV_Test_State {
-	public static $options    = array();
-	public static $user_meta  = array();
-	public static $transients = array();
-	public static $actions    = array();
-	public static $filters    = array();
-	public static $http_queue = array();
-	public static $http_log   = array();
+	public static $options        = array();
+	public static $user_meta      = array();
+	public static $transients     = array();
+	public static $actions        = array();
+	public static $filters        = array();
+	public static $http_queue     = array();
+	public static $http_log       = array();
+	public static $post_meta      = array();
+	public static $term_meta      = array();
+	public static $product_terms  = array();
+	public static $term_ancestors = array();
+	public static $cart_items     = array();
+	public static $notices        = array();
+	public static $orders         = array();
+	public static $current_can    = true;
+	public static $nonce_valid    = true;
 
 	public static function reset() {
-		self::$options    = array();
-		self::$user_meta  = array();
-		self::$transients = array();
-		self::$actions    = array();
-		self::$filters    = array();
-		self::$http_queue = array();
-		self::$http_log   = array();
+		self::$options        = array();
+		self::$user_meta      = array();
+		self::$transients     = array();
+		self::$actions        = array();
+		self::$filters        = array();
+		self::$http_queue     = array();
+		self::$http_log       = array();
+		self::$post_meta      = array();
+		self::$term_meta      = array();
+		self::$product_terms  = array();
+		self::$term_ancestors = array();
+		self::$cart_items     = array();
+		self::$notices        = array();
+		self::$orders         = array();
+		self::$current_can    = true;
+		self::$nonce_valid    = true;
 	}
 }
 
@@ -341,6 +359,212 @@ function wp_remote_retrieve_header( $response, $header ) {
 	return is_array( $response ) && isset( $response['headers'][ $header ] ) ? $response['headers'][ $header ] : '';
 }
 
+// ----------------------------------------------------- Post/term meta shims.
+function get_post_meta( $post_id, $key, $single = false ) {
+	if ( isset( FV_Test_State::$post_meta[ $post_id ][ $key ] ) ) {
+		return FV_Test_State::$post_meta[ $post_id ][ $key ];
+	}
+	return $single ? '' : array();
+}
+
+function update_post_meta( $post_id, $key, $value ) {
+	FV_Test_State::$post_meta[ $post_id ][ $key ] = $value;
+	return true;
+}
+
+function get_term_meta( $term_id, $key, $single = false ) {
+	if ( isset( FV_Test_State::$term_meta[ $term_id ][ $key ] ) ) {
+		return FV_Test_State::$term_meta[ $term_id ][ $key ];
+	}
+	return $single ? '' : array();
+}
+
+function update_term_meta( $term_id, $key, $value ) {
+	FV_Test_State::$term_meta[ $term_id ][ $key ] = $value;
+	return true;
+}
+
+function delete_term_meta( $term_id, $key ) {
+	unset( FV_Test_State::$term_meta[ $term_id ][ $key ] );
+	return true;
+}
+
+function get_the_terms( $post_id, $taxonomy ) {
+	if ( empty( FV_Test_State::$product_terms[ $post_id ] ) ) {
+		return false;
+	}
+	$terms = array();
+	foreach ( FV_Test_State::$product_terms[ $post_id ] as $term_id ) {
+		$terms[] = (object) array( 'term_id' => $term_id );
+	}
+	return $terms;
+}
+
+function get_ancestors( $term_id, $taxonomy, $resource_type = '' ) {
+	return isset( FV_Test_State::$term_ancestors[ $term_id ] ) ? FV_Test_State::$term_ancestors[ $term_id ] : array();
+}
+
+// --------------------------------------------------- Capability/nonce shims.
+function current_user_can( $capability ) {
+	return FV_Test_State::$current_can;
+}
+
+function wp_verify_nonce( $nonce, $action = -1 ) {
+	return FV_Test_State::$nonce_valid;
+}
+
+function wp_nonce_field( $action = -1, $name = '_wpnonce' ) {}
+
+function wp_unslash( $value ) {
+	return $value;
+}
+
+function sanitize_key( $key ) {
+	return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $key ) );
+}
+
+// -------------------------------------------------------- WooCommerce shims.
+/**
+ * Base class so `instanceof \WC_Order` checks work against the test stub.
+ */
+class WC_Order {}
+
+/**
+ * In-memory order stub matching the CRUD surface Order_Meta touches.
+ */
+class FV_Test_Order extends WC_Order {
+	public $id;
+	public $customer_id;
+	public $status;
+	public $meta        = array();
+	public $notes       = array();
+	public $transitions = array();
+
+	public function __construct( $id, $customer_id, $status = 'pending' ) {
+		$this->id          = $id;
+		$this->customer_id = $customer_id;
+		$this->status      = $status;
+
+		FV_Test_State::$orders[ $id ] = $this;
+	}
+
+	public function get_id() {
+		return $this->id;
+	}
+
+	public function get_customer_id() {
+		return $this->customer_id;
+	}
+
+	public function get_status() {
+		return $this->status;
+	}
+
+	public function get_meta( $key ) {
+		return isset( $this->meta[ $key ] ) ? $this->meta[ $key ] : '';
+	}
+
+	public function update_meta_data( $key, $value ) {
+		$this->meta[ $key ] = $value;
+	}
+
+	public function delete_meta_data( $key ) {
+		unset( $this->meta[ $key ] );
+	}
+
+	public function save() {}
+
+	public function add_order_note( $note ) {
+		$this->notes[] = $note;
+	}
+
+	public function update_status( $status, $note = '' ) {
+		$this->transitions[] = array( $this->status, $status );
+		$this->status        = $status;
+		if ( '' !== $note ) {
+			$this->notes[] = $note;
+		}
+		return true;
+	}
+}
+
+function wc_get_orders( $args ) {
+	$found = array();
+	foreach ( FV_Test_State::$orders as $order ) {
+		if ( isset( $args['customer_id'] ) && (int) $order->get_customer_id() !== (int) $args['customer_id'] ) {
+			continue;
+		}
+		if ( isset( $args['status'] ) && $order->get_status() !== $args['status'] ) {
+			continue;
+		}
+		if ( isset( $args['meta_query'] ) ) {
+			foreach ( $args['meta_query'] as $clause ) {
+				if ( is_array( $clause ) && isset( $clause['key'] ) && 'EXISTS' === ( isset( $clause['compare'] ) ? $clause['compare'] : '' )
+					&& '' === (string) $order->get_meta( $clause['key'] ) ) {
+					continue 2;
+				}
+			}
+		}
+		$found[] = $order;
+	}
+	return array_slice( $found, 0, isset( $args['limit'] ) ? (int) $args['limit'] : 10 );
+}
+
+function wc_add_notice( $message, $type = 'success' ) {
+	FV_Test_State::$notices[] = array( $type, $message );
+}
+
+function wc_print_notice( $message, $type = 'success' ) {
+	FV_Test_State::$notices[] = array( $type, $message );
+}
+
+/**
+ * WC() singleton with the one member the gate reads: cart→get_cart().
+ */
+function WC() { // phpcs:ignore WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid -- Mirrors WooCommerce.
+	$wc       = new stdClass();
+	$wc->cart = new class() {
+		public function get_cart() {
+			return FV_Test_State::$cart_items;
+		}
+	};
+	return $wc;
+}
+
+function is_checkout() {
+	return ! empty( FV_Test_State::$options['_test_is_checkout'] );
+}
+
+function is_wc_endpoint_url() {
+	return ! empty( FV_Test_State::$options['_test_is_endpoint'] );
+}
+
+function has_block( $block, $post = null ) {
+	return ! empty( FV_Test_State::$options['_test_has_checkout_block'] );
+}
+
+function wc_get_page_id( $page ) {
+	return 42;
+}
+
+function wc_get_account_endpoint_url( $endpoint ) {
+	return 'https://example.test/my-account/' . $endpoint . '/';
+}
+
+function wc_get_checkout_url() {
+	return 'https://example.test/checkout/';
+}
+
+/**
+ * Redirect shim: throws so tests can assert the redirect without hitting
+ * the `exit` that follows in production code.
+ */
+class FV_Test_Redirect extends Exception {}
+
+function wp_safe_redirect( $location ) {
+	throw new FV_Test_Redirect( $location );
+}
+
 // --------------------------------------------------- Load classes under test.
 require __DIR__ . '/../facevault-identity-verification/includes/class-settings.php';
 require __DIR__ . '/../facevault-identity-verification/includes/class-api-client.php';
@@ -351,3 +575,9 @@ define( 'FACEVAULT_VERSION', '0.0.0-test' );
 define( 'FACEVAULT_PLUGIN_URL', 'https://example.test/wp-content/plugins/facevault-identity-verification/' );
 define( 'FACEVAULT_PLUGIN_DIR', __DIR__ . '/../facevault-identity-verification/' );
 require __DIR__ . '/../facevault-identity-verification/includes/class-render.php';
+require __DIR__ . '/route-exception-stub.php';
+require __DIR__ . '/../facevault-identity-verification/includes/class-admin-users.php';
+require __DIR__ . '/../facevault-identity-verification/woocommerce/class-account-tab.php';
+require __DIR__ . '/../facevault-identity-verification/woocommerce/class-gating-rules.php';
+require __DIR__ . '/../facevault-identity-verification/woocommerce/class-checkout-gate.php';
+require __DIR__ . '/../facevault-identity-verification/woocommerce/class-order-meta.php';
