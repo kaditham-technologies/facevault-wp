@@ -13,3 +13,6 @@ release-body.md
 .DS_Store
 .idea/
 .vscode/
+
+# PHPUnit cache
+.phpunit.result.cache

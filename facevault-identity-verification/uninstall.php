@@ -32,5 +32,6 @@ if ( ! empty( $facevault_settings['delete_data_on_uninstall'] ) ) {
 delete_option( 'facevault_settings' );
 delete_option( 'facevault_webhook_log' );
 delete_option( 'facevault_quota_notice' );
+delete_option( 'facevault_ratecap_notice' );
 delete_option( 'facevault_db_version' );
 delete_option( 'facevault_rewrite_flushed' );
