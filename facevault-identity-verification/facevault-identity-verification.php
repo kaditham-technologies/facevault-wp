@@ -3,7 +3,7 @@
  * Plugin Name:       FaceVault Identity Verification
  * Plugin URI:        https://github.com/kaditham-technologies/facevault-wp
  * Description:       Identity verification (ID document + selfie + liveness) for WordPress and WooCommerce via FaceVault. Documents never touch your server.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.3
  * Requires PHP:      7.4
  * Author:            FaceVault
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'FACEVAULT_VERSION', '0.1.0' );
+define( 'FACEVAULT_VERSION', '0.1.1' );
 define( 'FACEVAULT_PLUGIN_FILE', __FILE__ );
 define( 'FACEVAULT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FACEVAULT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
