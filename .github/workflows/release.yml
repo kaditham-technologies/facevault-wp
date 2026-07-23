@@ -14,7 +14,7 @@ jobs:
     steps:
       # All third-party actions are SHA-pinned per supply-chain best practice;
       # the comment records the human-readable version next to each SHA.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       # A WordPress plugin must ship its real version in three places that
       # cannot be injected at runtime. Fail loudly if the tag disagrees with
